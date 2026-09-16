@@ -4,7 +4,11 @@ import { isValidObjectId } from 'mongoose';
 
 import { User } from '../models/user.js';
 import { Session } from '../models/session.js';
-import { createSession, setSessionCookies } from '../services/auth.js';
+import {
+  clearSessionCookies,
+  createSession,
+  setSessionCookies,
+} from '../services/auth.js';
 
 const SALT_ROUNDS = 10;
 
@@ -59,6 +63,8 @@ export const refreshUserSession = async (req, res) => {
   }
 
   if (session.refreshTokenValidUntil < new Date()) {
+    await Session.deleteOne({ _id: sessionId });
+    clearSessionCookies(res);
     throw createHttpError(401, 'Session token expired');
   }
 
@@ -77,9 +83,7 @@ export const logoutUser = async (req, res) => {
     await Session.deleteOne({ _id: sessionId });
   }
 
-  res.clearCookie('sessionId');
-  res.clearCookie('accessToken');
-  res.clearCookie('refreshToken');
+  clearSessionCookies(res);
 
   res.status(204).send();
 };
